@@ -1,0 +1,5 @@
+---
+layout:    project-page
+title:     "Hardware Design"
+summary:   "Covers the hardware portion of the project"
+---

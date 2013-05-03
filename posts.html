@@ -1,0 +1,20 @@
+---
+title:  Posts
+layout: default
+slug:   posts
+---
+<h1>{{ page.title }}</h1>
+
+<ul>
+{% assign current_year = false %}
+{% for post in site.articles %}
+{% capture compare_year %}{{ post.date | date: '%Y' }}{% endcapture %}
+  {% if current_year != compare_year %}
+</ul>
+<h2>{{ post.date | date: '%Y' }}</h2>
+<ul>
+  {% endif %}
+  <li><span class="date">{{ post.date | date: '%d-%b' }}</span> <a href="{{ post.url }}">{{ post.title }}</a></li>
+{% capture current_year %}{{ post.date | date: '%Y' }}{% endcapture %}
+{% endfor %}
+</ul>

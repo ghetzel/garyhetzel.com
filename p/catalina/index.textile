@@ -1,0 +1,21 @@
+---
+layout:    project-page
+title:     "Catalina"
+summary:   "An in-car media frontend, vehicular data collection, and navigation system"
+---
+
+h2. Overview
+
+Catalina is a hardware and software project designed to outfit my car with an onboard computer for interactive use.  The primary goals of this project are:
+
+* Replace and augment the functionality of the existing radio/CD player, including audio and video playback from local disk, external mass storage, or over the Internet.
+
+* Collect and store on-board data from vehicle sensors and OBD-II engine telemetry for display and analysis.
+
+* Integrate a navigation into the car with intelligent, spatially-aware events.
+
+h2. Project Outline
+
+This is a high-level overview of the components that the project will have.
+
+!/images/projects/catalina/wbs.png(Made this with XMind 3.2.1; an amazing, free Mind Mapping utility)!

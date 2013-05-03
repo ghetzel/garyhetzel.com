@@ -1,0 +1,14 @@
+<div class="post">
+  <div class="head">
+    <div class="date">
+      <span class="month">{{ post.date | date: '%b' }}</span>
+      <span class="day">{{ post.date | date: '%d' }}</span>
+    </div>
+
+    <h2><a href="{{ post.url }}" {% if post.subtitle %}title="{{ post.subtitle }}" {% endif %}>{{ post.title }}</a></h2>
+  </div>
+
+  <div class="body">
+    {{ post.content | truncatewords: 60 }} <a href="{{ post.url }}?hl=1" title="Would you like to know MORE?">More &raquo;</a>
+  </div>
+</div>

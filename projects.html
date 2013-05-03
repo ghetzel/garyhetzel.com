@@ -1,0 +1,15 @@
+---
+title:  Projects
+layout: default
+slug:   projects
+---
+<h1>Projects</h1>
+<p>
+  This page houses information about some of my ongoing, fanciful, possibly insane, perhaps somewhat expensive, totally not complete, and already late projects that I'm working on.
+</p>
+
+<ul>
+{% for project in site.projects %}
+  <li><a href="/p/{{ project.slug }}">{{ project.title }}</a> - {{ project.summary }}</li>
+{% endfor %}
+</ul>

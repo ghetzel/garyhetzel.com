@@ -1,0 +1,21 @@
+---
+layout: default
+---
+<div class="project">
+  <div class="head">
+    <h1>{{ page.title }}</h1>
+    {% if page.summary %}
+    <h3>{{ page.summary }}</h3>
+    
+    {% if page.date %}
+    <div class="ops">
+      {{ page.date | date: '%A, %d-%b, %Y' }}
+    </div>
+    {% endif %}
+
+    {% endif %}
+  </div>
+  <div class="body">
+    {{ content }}
+  </div>
+</div>

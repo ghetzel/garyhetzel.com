@@ -1,0 +1,191 @@
+---
+layout:   'post'
+time:     '23:01'
+title:    'Using Puppet for System Data Collection'
+tags:
+  - puppet
+  - tech
+  - ruby
+  - development
+  - devops
+---
+
+One of the things about "Puppet":http://puppetlabs.com that I find the most potentially useful is its integration of a fact engine, Facter, into almost every part of the configuration.  Facts are simple, flat, name-value pairs that describe measurable data about a system.  In the default implementation of Facter as shipped with Puppet, the facts are basically a distilled version of the data commonly found in <tt>sysfs</tt> (the <tt>/proc</tt> folder), as well as output captured from some common system utilities.  That said, the extensibility of Puppet (and Facter) is almost limitless.  Facter actually does pretty well on its own.  Puppet integrates it heavily into the Manifest DSL, template engine, and other areas while still maintaining it as a separate entity from the Puppet core namespace.
+
+h2. Adding New Facts
+
+It's almost trivially easy to add new facts to the purview of Facter.  Start by creating a new file in a location accessible by the <tt>FACTERLIB</tt> environment variable.  So, for example, if you create a file in <tt>/opt/facter/lib/</tt>, you can access any facts defined in that directory by running:
+
+<pre>
+$ FACTERLIB=/opt/facter/lib facter myCustomFact
+</pre>
+
+Let's create a fact that shows us the system load averages for the past 1, 5, and 15 minutes by parsing the data out of <tt>/proc/loadavg</tt>.
+
+<pre class="code">
+# in file: /opt/facter/lib/load.rb
+#
+load1, load5, load15 = %x{cat /proc/loadavg}.split(' ')
+
+Facter.add(:loadavg1) do
+  setcode do
+    load1
+  end
+end
+
+Facter.add(:loadavg5) do
+  setcode do
+    load5
+  end
+end
+
+Facter.add(:loadavg15) do
+  setcode do
+    load15
+  end
+end
+</pre>
+
+This, when run, would return something like this:
+
+<pre>
+$ FACTERLIB=/opt/facter/lib facter | grep loadavg
+loadavg1 => 0.21
+loadavg5 => 0.11
+loadavg15 => 0.07
+</pre>
+
+Whatever is returned from the <tt>setcode</tt> block inside of the Facter.add block will be the fact's value when queried.  The way we got the data here is by using the Ruby <tt>%x{}</tt> notation for executing a system command and returning its output.  I did this here because the existence of <tt>/proc/loadavg</tt> is a reasonable guarantee on most Linux systems and because it quickly demonstrated the point.  However, were there to be an error in that execution (say, for example, if you were on a FreeBSD system), Facter would throw a shit fit.  Luckily, the Facter library has a built-in mechanism for executing local system commands.
+
+<pre class="code">
+Facter.add(:hello) do
+  setcode do
+    Facter::Util::Resolution.exec("echo 'Hello'")
+  end
+end
+</pre>
+
+By using the <tt>Facter::Util::Resolution.exec()</tt> method, you ensure that any errors will be caught by Facter and handled with a minimum of ugly stack trace in your output.  In fact, this method is so useful there is even a shortcut to it:
+
+<pre class="code">
+Facter.add(:hello) do
+  setcode "echo 'Hello'"
+end
+</pre>
+
+This block of code operates identically to the previous one.
+
+It is important to note that facts are always returned as strings, and Facter does not have any intrinsic understanding of data type; that is, all values are stringified before being returned to the user.  Furthermore, Facter facts are simple: they do not support any form of object storage or serialization on their own.  You could technically serialize something into a fact, then deserialize it in a calling application, but this is messy as hell and if you do this I will hunt you down and beat you with a rubber hose.
+
+
+h2. Puppet Data Collection: Fact Termini
+
+Now that you have a veritable forest of facts ripe for use in whatever tawdry manner you can justify, it's time to put them to work.  The extremely useful thing about Facter facts in Puppet is that _they are evaluated on the client_.  Puppet has a mechanism for distributing your custom fact files to your client machines as they perform a Puppet sync.  The fact code is verified to be present and at the latest copy, evaluated, collected, and sent back to the Puppetmaster for integration into the Puppet "Catalog" (outside of this article's scope) so that the state Puppet is enforcing on a system can be based on facts useful to that system.  The take-away here is that facts are automatically evaluated on the client, but sent back to the server.
+
+Puppet supports a few useful ways of persisting and accessing this data.  The one we're covering today is the <tt>facts_terminus</tt> configuration in your puppet.conf configuration.  This allows you to persist and maintain collected facts from client systems into (among other places) a MySQL database.  This is what a sample configuration looks like:
+
+<pre class="code">
+# ... other sections ...
+
+[master]
+  certname       = puppet.example.com
+  facts_terminus = inventory_active_record
+  dbadapter      = mysql
+  dbuser         = puppet
+  dbpassword     = p@s$w0rd
+  dbserver       = localhost
+  downcasefacts  = true
+</pre>
+
+Basically, what this config is saying is "save any facts encountered into the mysql database on localhost (user: puppet, password: p@s$w0rd) using the inventory_active_record fact terminus adapter".  There's a little niblet of truth I can offer from that last bit...ActiveRecord.
+
+In order to make this work, you'll have to install the <tt>activerecord</tt> and <tt>mysql</tt> RubyGems.  Now, since RubyGems has a _hilarious_ propensity to hide massive changes in sub-minor point releases, version is important here.  I ran into all sorts of fun problems until I realized I just installed the ActiveRecord gem without thinking.  The latest version of ActiveRecord from the RubyGems repos was in fact _too new_ , and something fundamental changed about some impossibly small part of a critical function.  Specifically, it was this error when doing a Puppet agent run on clients: <strong>err: Could not retrieve catalog from remote server: Error 400 on SERVER: Could not autoload inventory==_active_==record: uninitialized constant ActiveRecord::NamedScope</strong>
+
+Here's my current, working configuration:
+
+|_.Puppet Version  | 2.7.10 (open source) |
+|_.ActiveRecord Gem| 2.3.5 (<tt>gem install activerecord ==--==version 2.3.5</tt>)|
+|_.mysql Gem       | 2.8.1 |
+
+As always, your mileage may vary.  But so long as you take care to not stay on the bleeding edge of ActiveRecord, provide a database user that can create and alter tables (as well as select, update, delete, etc.), and have that ready before restarting the Puppetmaster service; I suspect things will be peachy for you.  SSL errors are another story entirely, and one I won't be getting into at the moment.
+
+h2. Accessing the Data
+
+
+h3.  The Less-Right Way
+
+Once the data is in the database, you have a few ways to get at it.  Of course, the easiest (and depending on your upbringing, most obvious) is to query the database directly.  Now, Puppet's documentation recommends against this for the same reason that everybody recommends against integrating into somebody else's internal database schema: it's not super great design and could break things later on.  It's a violation of all the big mixed metaphors behind black box engineering in that you are mucking around in things you, technically, shouldn't be mucking around in.  If that schema changes, you've gone and coupled yourself to that change.
+
+In the case of Puppet, I personally wouldn't hate you forever if you just did a direct SQL query to get that data.  I leave it to competent engineers and architects to understand that Eye Protection Is Required and to not melt their faces off, perhaps even by wrapping the queries up in a view.  If you are interested in the no-goggles approach, here are the default tables that store your data:
+
+<pre>
+table: inventory_nodes
++------------+--------------+------+-----+---------+----------------+
+| Field      | Type         | Null | Key | Default | Extra          |
++------------+--------------+------+-----+---------+----------------+
+| id         | int(11)      | NO   | PRI | NULL    | auto_increment |
+| name       | varchar(255) | NO   | UNI | NULL    |                |
+| timestamp  | datetime     | NO   |     | NULL    |                |
+| updated_at | datetime     | YES  |     | NULL    |                |
+| created_at | datetime     | YES  |     | NULL    |                |
++------------+--------------+------+-----+---------+----------------+
+
+table: inventory_facts
++------------+--------------+------+-----+---------+-------+
+| Field      | Type         | Null | Key | Default | Extra |
++------------+--------------+------+-----+---------+-------+
+| node_id    | int(11)      | NO   | PRI | NULL    |       |
+| name       | varchar(255) | NO   | PRI | NULL    |       |
+| value      | text         | NO   |     | NULL    |       |
++------------+--------------+------+-----+---------+-------+
+</pre>
+
+Where <tt>inventory_facts.node_id</tt> = <tt>inventory_nodes.id</tt>.  Use at your own risk, extreme risk of injury, et cetera.
+
+
+h3. The More-Righter Way
+
+If you wanna play with the gloves on, or if your application can more easily make use of a REST API and YAML/JSON, then the official Inventory Service is probably the better bet.  The inventory service is a REST endpoint that runs on the Puppetmaster and will allow you to retrieve, search, and enumerate facts for a given host or set of hosts.  *NB:* I haven't had much experience working with this, so some hacking about with Fiddler or Charles Web Proxy might be in order (also reading the documentation might be cute).
+
+That said, to enable the use of the inventory REST endpoint (disallowed by default), edit the following section in <tt>&lt;puppet conf dir&gt;/auth.conf</tt>.
+
+<pre class="code">
+path /facts
+auth any
+method find, search
+allow *
+</pre>
+
+*BE WARNED!*  This is a completely permissive change that will allow any client to access facts about your network ANONYMOUSLY.  Google around and play with the "allow" and "auth" lines to make security happen.
+
+Once you've made that change and restarted Puppetmaster, the following request should make happy times:
+
+<pre>
+GET https://puppet.example.com:8140/production/facts/server.example.com
+Accept: yaml
+Content-Type: application/xml
+</pre>
+
+And what you will get will look something like this:
+
+<pre class="code">
+--- !ruby/object:Puppet::Node::Facts
+  name: server.example.com
+  values: 
+    kernelversion: 2.6.18
+    puppetversion: 2.7.10
+    fqdn: server.example.com
+    hardwareisa: AMD Athlon(tm) 64 X2 Dual Core Processor 5000+
+    path: /usr/bin:/bin:/usr/sbin:/sbin
+    id: root
+    kernelrelease: 2.6.18-el5
+    swapfree: 226.42 MB
+    selinux: "false"
+
+... and so on ...
+</pre>
+
+
+h2. In Other Words...
+
+Puppet and Facter provide as really bitchin combo for distributed, highly customizable generic data collection.  If you have a network that is already being managed by Puppet, then this is a really good bolt-on addition that can probably be of use to some deprived programmer almost immediately.  If you just want to use Facter on a per-node basis, it still works well on the client side too without the need for a lot of infrastructure.  Overall, its a remarkably unsung potential solution to a lot of problems admins face everyday in managing a network large or small.

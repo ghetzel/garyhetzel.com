@@ -1,0 +1,13 @@
+pagetitle:       "Gary Hetzel: Overrated"
+title:           "Gary Hetzel"
+tagline:         "Overrated"
+url:             "http://www.garyhetzel.com"
+email:           "garyhetzel@gmail.com"
+twitter:         "gargarxp"
+
+project_dir:     "p"
+rss_author:      "garyhetzel@gmail.com (Gary Hetzel)"
+
+post_defaults:
+  layout:        default
+

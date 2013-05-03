@@ -1,0 +1,33 @@
+---
+layout:    post
+time:      "3:12"
+title:     "A .NET Treaty - The Case for Emotional Maturity"
+subtitle:  "The Post the Became an Essay"
+---
+
+For those that know me, I am a perturbedly stubbourn individual.  I like my eggs scrambled, my Internet neutral, and my code free; and there is all manner of hell to pay when that doesn't happen.  With several hilarious exceptions, I pretty much know what I want and what I don't want.  I'm a textbook Linux and FOSS convert.  I started down the same path 99.9999% of all computer users start down, which was Windows.  In my case, Windows 98 (compared to some other friends, a late bloomer).  And I've watched the platform evolve, go through some big changes (wonderous and terrible alike), and I've taken my fair share of abuse.  All Windows users of a certain level will undoubtedly experience this.  You're learning how to tame this wild beast of electrons and silicon.  You marvel in its sheer complexity, you get curious and poke around.  Then one thing leads to another and you've got seven copies of Bonzi Buddy competing with WeatherBug and MyWebSearch toolbars for the last remaining bytes of unpaged memory.  This happens just as W32.SillyFDC rearranges the icons on your desktop into the pattern of a smiley face, as if to say "This is what you get for trying, you arrogant ass."
+
+While your anecdotal mileage may vary on that story, Microsoft has a well established and frankly well earned compendium of nasty, ill-willed, scornful critics that (for better or worse) simply cannot stop beating that dead horse.  In my former teenage years, just about as I was learning how to reinstall my operating system from the Gateway restore CD, I began to hear the occasional murmurs on the dial-up Intertubes about something markedly different from what I was used to.  About a CD that, when inserted into my Essential 433C mini-tower, would make the screen show pretty pictures and dazzling 16-bit-color menus where no 4-colored flag could be found.  It would take a further ten years for me to fully discover and embrace Linux as my platform of choice.
+
+That decade was a remarkable journey.  It was one full of delights of all kinds, dizzying lows, and an unfortunate habit of data loss.  I was a sweaty, fumbling mess and loved every bit of it (except the bits I didn't love).  I learned to hate my old masters and embrace my new ones.  I learned of the KISS priciple, of the awesome power that is the command line.  I taught myself regular expressions, and systematically dissected every pixel I saw on the screen, bending them to my sheer will.  For every decidedly insane demand for more control, an open desktop delivered where countless mountains of spyware and free cursors had failed me.  And as I developed this newfound appreciation for all that was simple, single-purpose, and endlessly functional; I equally learned to loathe complexity.  And the emergence of the .NET family of languages, multi-gigabyte toolchains, and Reference Libraries of Congress came at a time when I simply couldn't stand it anymore.
+
+I saw Microsoft's efforts as sinister and evil.  I saw things like .NET, and eventually things like WPF and Workflows as tools of the devil.  I associated IDEs and managed code with everything that was wrong with the world.  I became a programmer to write code, not to type a little, hit a dot, and let the editor finish my thought for me.  I'm trying to do something original here, dammit.  Stop telling me what I already know.
+
+This was the mindset I used to have.
+
+This whole trip down memory lane has been steadily, if not expediciously, leading to a point.  Over this weekend I found myself in a position to write some code for Windows.  Namely, a Windows service.  Now, I mulled over my options quite a bit to that end.  I considered, for a moment, using Ruby.  It's my current flavor-of-the-month language, elegant, and fairly complete for my purposes.  But that didn't sit right with me, as I could potentially be deploying this code to hundreds of machines; and the thought of piggybacking the full interpreter with that was...unplesant.  I went through a similar thought process with Python and the "pywin32":http://sourceforge.net/projects/pywin32 module.  Then it hit me like "a metal beam to the face":/images/posts/facebeam.gif ...this is *exactly* the problem that .NET set out to solve.
+
+My requirements were as follows:
+
+* It is a Windows client that will talk to an as-yet *nix-exclusive daemon.
+* It must run as a managed Windows service.
+* It must be remotely deployable.
+* It must be able to read a file, pull data from WMI and/or Performance Counters, and send that data over the wire.
+
+The only better use case for .NET would be if NTLM integration was a requirement.  It was perfect: I had the tools (i.e. Visual Studio 2008), I had the project, and I had three days to will it into existence.
+
+I'm here to tell you that was a great success.
+
+The details of this mystery project will be revleaed in a later post, but the lesson here is one I have been touting for a very long time, but only just recently began following myself:  use the right tool for the job.  While I may have seen a degree of success in the past by throwing caution to the wind and fashioning a workable solution out of duct tape and pliers where a 10mm socket wrench _was_ the answer; I have as late begun to realize that a statistically significant number of needless, hard-headed hacks and refusals to abide by any rules (even, nay, especially my own) have led to nothing but blood and bee attacks.  I was tired of being stung, and just once I wanted to put down my own rebellion.  At a certain point, it's not conformity -- it's just the Right Way(TM).
+
+In summary, yes...all technologists and engineers of any merit and worth will push boundaries, break rules, and do something completely batshit insane just for kicks.  I believe this kind of thinking is a necessary part of doing what we do.  But coming from a young age, moving through adolescence, and carrying with me those old assumptions just started to get in the way of efficiency and good development practice.  While I feel the jury is still out on ASP.NET, Java, and Tomcat for web development (but that's another rant...), when presented with a problem, don't just willy-nilly eliminate options based on emotional bias and untested assumptions.  Do as all good engineers do; validate your hypothesis and remember that even failure is a result.  And that's science.

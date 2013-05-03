@@ -1,0 +1,76 @@
+---
+layout:   'post'
+time:     '18:58'
+title:    'Hiera as a Puppet External Node Classifier'
+tags:
+  - puppet
+  - tech
+  - ruby
+  - development
+  - devops
+  - hiera
+  - aws
+---
+
+I didn't want to turn this into a Puppet blog, but damned if I don't love stateful configuration management.  I was recently called upon to revisit how nodes are classified in a 400+ node Puppet installation.  The servers are diverse in nature, but the environment is a really good use case for a lot of interesting classification and taxonomy topics.  Turning the theory into self-classifying servers turned out to be a lot easier than expected.
+
+h2. Who Am I and What Do I Want?
+
+Existential identity crises aside, this is essentially the question every server will eventually ask your Puppetmaster...and it better have a good answer.  Answering this question, in general, is a lifelong process.  However, for your Puppetmaster, it needs to happen a good deal faster than that.  By default, Puppet will answer this question with nothing.  There exists a file called <tt>site.pp</tt> that is called upon to respond to this admittedly weighty inquiry.  All agents, by default, will be answered by the aptly-named <tt>default{}</tt> node in this file (or in a file included therein).  The purpose of a node declaration is essentially to provide a list of classes and top-scope variables that will be applied to a given node.  Ergo, and unless otherwise stated, all nodes will hit the default node, and any classes and variable declared in there will be applied to all nodes.  However, this becomes useless mighty fast.  This is where an appropriate host naming scheme becomes important.  Node declarations look something like this:
+
+<pre class="code">
+node "myserver.example.net" {
+  include dns
+  include ldap	
+  include sudo
+}
+</pre>
+
+In this example, if your agent's SSL certificate claims to be from myserver.example.net, then whatever magic and non-stop fun happening inside of the dns, ldap, and sudo classes will be your party to hop in on.  All other hosts will get the default node declarations, and with it whatever boring stuff is happening there.  An important thing to note is that once you declare a node for a specific host (or set of hosts), that declaration becomes the authoritative one.  The default node will not be called, so if you want to include classes from multiple sources, you'll have to get creative.  Your options here are basically limited to node inheritance (which, like classes, is single inheritance).  However, those inherited nodes can themselves inherit one other node.  The problem you end up with here, especially in complex multi-faceted environments, is that eventually you have an endless and impossible-to-debug game of Crack the Whip all over your node declarations.
+
+One of the other mitigating features of node declarations is that they aren't limited to a single host, but rather can accept several host names (comma separated) or a regular expression.  If your environment's host naming scheme has some form of structure and logic to it and _isn't_ just an awkward melody of Simpsons characters and Marvel superheroes, being able to use regular expressions to classify nodes is extremely powerful.  Indeed, the environment that I am currently working with has just such a naming scheme, and so far, regex is holding its own fairly well.  However, an interesting edge case came up that turned the whole thing on its side -- what happens if you can't control the hostname?
+
+Now, technically Puppet isn't matching against the FQDN of the host, but rather on the <tt>certname</tt> of the host as specified in its <tt>puppet.conf</tt>.  However, I was not in love with the idea of decoupling the certificate name from the FQDN, for reasons of information clarity and several bad experiences with cryptic SSL-related errors that Puppet likes to toss around like it's at the state fair.  This also seemed like as good a time as any to play around with something I learned in the truly excellent Puppet Training I was lucky enough to receive: Hiera.
+
+
+h2. Trees
+
+Hiera is a separate sub-project under the "puppetlabs":https://github.com/puppetlabs banner that provides a hierarchical, structured means for organizing and retrieving data structures from multiple data sources.  What this means is that you can setup a cascading stack of data sources, each of which can be conditionally included in the search for a particular piece of information, that are able to return either the first match (for scalar values like strings and booleans), or the aggregated result of all matches (for set values like arrays and hashes).  This merging feature is key, because if your conditions are setup intelligently and your modules are granular enough, you can additively build a complete set of valid class declarations that are pulled from multiple locations.  This "faceted" approach to node classification is huge because it lets you make blanket statements like "All development servers get X, All Web Servers get Y".  If you happen to identify as _both_ a development _and_ web server, you get X _and_ Y.  To accomplish this with flat-file node declarations alone means a tricky chain of inherited node declarations.
+
+There's another really great feature of Hiera that trumps node declarations.  Nodes are switched on one thing and one thing alone: <tt>certname</tt>.  Hiera, through some magic that you will see later, can make decisions based on Facter facts.  This means you can classify what happens to a node based on how much free memory it has, if you were so acutely inclined.
+
+
+h2. Node Terminus
+
+This sounded great when I first heard about it, and it sounded great when we discussed it as a solution to our imminent "We can't rename certain machines but we can set text facts on them" problem.  However, there was one catch: at the time of writing, neither Hiera (nor its sister module, <tt>hiera-puppet</tt>) have a facility for it to act as a Puppet ENC.  The "documentation":http://docs.puppetlabs.com/guides/external_nodes.html for an ENC outlines the use and expectations of the <tt>exec</tt> ENC.  This classifier will execute any fully-qualified command on the Puppetmaster when a node asks for a catalog.  This arbitrary program needs only return YAML that contains a <tt>classes</tt> array/hash with a list of classes to declare, and optionally a <tt>parameters</tt> hash with top-scope variables to set.  And this would have been perfect, except the <tt>hiera</tt> command does not have any facility to emit YAML, nor can I request multiple values to return at once.  I don't consider this a limitation of Hiera, but rather it being only as complicated as it _needs_ to be.
+
+<pre class="code">
+# I'm example YAML!
+# Puppet can use me to give my existence meaning and purpose!
+---
+classes:
+  base:
+    param1: 'woo'
+    param2: 'yay'
+  otherclass:
+  stillotherclass:
+
+parameters:
+  topscopevar1: "I'm a variable, and I'm on %{fqdn}"
+</pre>
+
+I thought of writing a wrapper script that could perform the necessary calls for me and assemble them into <tt>exec</tt>-consumable YAML, but I was not super pleased with the idea of firing up an external shell every time a node hits the Puppetmaster.  In cases where you have a "thundering herd" situation, slower than necessary node classification just adds to your problems.  I sought to see this through as a first-class member of the Puppetmaster catalog compilation process.  So I dove into the source and poked around a bit.
+
+What I came up with was a much clearer understanding of how Puppet comes together, as well as a better notion of how the Indirector operates code-side.  I looked at how the existing <tt>exec</tt> ENC does its thing (from the Puppet gem root, it's at <tt>indirector/node/exec.rb</tt>).  What I came up with was a new Indirector terminus that can retrieve facts from a node, scope Hiera accordingly, and populate a <tt>Puppet::Node</tt> object with the appropriate classes and parameters.
+
+h2. tl;dr
+
+I have forked the <tt>hiera-puppet</tt> module on GitHub and added a new ENC to the Puppet Indirector.  You can get it "here":https://github.com/ghetzel/hiera-puppet.
+
+To enable it, setup a functioning Hiera installation on your Puppetmaster and add this line to your <tt>puppet.conf</tt>:
+
+<pre class="code">
+node_terminus = hiera
+</pre>
+
+This will then classify all nodes through Hiera _in addition to_ any node declarations in your <tt>site.pp</tt> (so watch out for duplicate declarations).

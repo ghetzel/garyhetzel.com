@@ -1,0 +1,11 @@
+---
+layout:    project
+#date:      "2011-07-24"
+title:     "Phoebus"
+summary:   "A multimedia metadata indexer, dynamic transcoder, and web front-end for media libraries"
+---
+
+h2. Overview
+
+Phoebus is a project that encompasses multiple components that provide multimedia streaming and presentation capabilities to a highly extensible range of media formats.  The purpose of the project is to allow universal access to personal media libraries by way of a web application; but also includes the backend file indexing, metadata collection and management, and dynamic media transcoding via a series of independent but compatible service applications and web service layers.
+

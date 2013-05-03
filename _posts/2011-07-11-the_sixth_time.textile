@@ -1,0 +1,11 @@
+---
+layout:    post
+time:      "00:00"
+title:     "This Will Be the 6th Time I've Started a Blog..."
+subtitle:  "...and I'm becoming exceedingly efficient at it."
+---
+!/images/posts/futurama.png(This image adequately captures a depiction of my numerous attempts to start a blog.)!
+
+But in all seriousness, I don't know why I keep doing this. I suppose I might have a penchant for unfinished projects piling up, or perhaps I'm just flighty and excitable. All I know is, when I want a place to dump words on the internet, I usually turn to [starting] a blog.
+
+As a sort of sick novelty, I'm even going to up the first post of the last blog I tried to create (as soon as I rip the archive HTML out of the smoldering backup file that remains of the server it was hosted on). I name this entry specifically because I more or less called myself a pansy for not sticking with it in the past, but this time will be different.

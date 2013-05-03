@@ -1,0 +1,32 @@
+---
+layout: default
+---
+<div class="post">
+  <div class="head">
+    <h2>{{ page.title }}</h2>
+    {% if page.subtitle %}
+    <h3>{{ page.subtitle }}</h3>
+  </div>
+  {% endif %}
+  <div class="body">
+    {{ content }}
+  </div>
+
+  <div class="related">
+    <script language='JavaScript'>
+       var OB_langJS = 'http://widgets.outbrain.com/lang_en.js';
+       var OBITm = '1339702905789';
+       var OB_raterMode = 'none'
+       var OB_recMode = 'dualBox'; 
+       var OutbrainPermaLink='http://garyhetzel.com{{ page.url }}'; 
+
+        if(typeof(OB_Script) != 'undefined'){
+          OutbrainStart();
+        } else {
+          var OB_Script = true;
+          var str = unescape("%3Cscript src=\'http://widgets.outbrain.com/OutbrainRater.js\' type=\'text/javascript\'%3E%3C/script%3E");
+          document.write(str);
+        }
+     </script>
+  </div>
+</div>
