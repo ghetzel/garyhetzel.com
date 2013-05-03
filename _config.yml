@@ -6,6 +6,7 @@ email:           "garyhetzel@gmail.com"
 twitter:         "gargarxp"
 
 project_dir:     "p"
+url_base_dir:    "/garyhetzel.com"
 rss_author:      "garyhetzel@gmail.com (Gary Hetzel)"
 
 post_defaults:
